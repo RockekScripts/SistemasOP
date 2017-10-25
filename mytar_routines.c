@@ -49,7 +49,21 @@ char*
 loadstr(FILE * file)
 {
 	// Complete the function
-	return NULL;
+	int _tamNombre=0;
+	char* nombre;
+	char bit;
+
+	while(bit=getc(file)!='\0') _tamNombre++;
+
+	nombre = malloc(sizeof(char)*(_tamNombre+1));
+
+	fseek(file,-(_tamNombre+1),SEEK_CUR);
+
+	for(int i =0;index<(_tamNombre+1);index++)
+		nombre[i]=getc(file);
+
+
+	return nombre;
 }
 
 /** Read tarball header and store it in memory.
@@ -64,8 +78,28 @@ loadstr(FILE * file)
 stHeaderEntry*
 readHeader(FILE * tarFile, int *nFiles)
 {
-	// Complete the function
-	return NULL;
+	int NumFicheros =0, tam=0;
+	stHeaderEntry *stHeader=NULL;
+
+	if(fread(&NumFicheros,sizeof(int),1,tarFile)==0){
+		return NULL;
+	}
+
+	stHeader=malloc(sizeof(stHeaderEntry)*NumFicheros);
+
+	for(int i =0; i <NumFicheros;i++)
+	{
+		if(!loadstr(tarFile,&stHeader[i].name)){
+			return NULL;
+		}
+		fread(&tam,sizeof(unsigned int),1,tarFile);
+
+		stHeader[i].size = tam;
+	}
+
+	(*nFiles) = NumFicheros;
+
+	return stHeader;
 }
 
 /** Creates a tarball archive 
@@ -92,8 +126,57 @@ readHeader(FILE * tarFile, int *nFiles)
 int
 createTar(int nFiles, char *fileNames[], char tarName[])
 {
+	FILE * inputFile;
+	FILE * outputFile;
 
-	return EXIT_FAILURE;
+	int bytesCopiados = 0;
+	int bytesCabecera = 0;
+	stHeaderEntry *cabecera;
+
+	cabecera = malloc(sizeof(stHeaderEntry)*nFiles);
+	bytesCabecera += sizeof(int);
+	bytesCabecera += nFiles*sizeof(unsigned int);
+
+	for(int i = 0; i < nFiles; i++){
+	bytesCabecera += strlen(fileNames[i])+1;
+
+	}
+	outputFile = fopen(tarName,"w");
+	fseek(outputFile, bytesCabecera, SEEK_SET);
+
+	for(int i = 0; i < nFiles; i++){
+		if((inputFile = fopen(fileNames[i], "r"))== NULL){
+			return(EXIT_FAILURE);		}
+
+	bytesCopiados = copynFiles(inputFile,outputFile, INT_MAX);
+	if(bytesCopiados == -1){
+		return EXIT_FAILURE;
+	}
+	else{
+		cabecera[i].size = bytesCopiados;
+		cabecera[i].name = malloc(sizeof(fileNames[i])+1);
+		strcpy(cabecera[i].name,fileNames[i]);
+	}
+	if (fclose(inputFile)== EOF)return EXIT_FAILURE;
+	}
+
+	if(fseek(outputFile,0,SEEK_SET)!= 0) return EXIT_FAILURE;
+	else fwrite(&nFiles, sizeof(int),1,outputFile);
+
+	for(int i = 0; i < nFiles; i++){
+		fwrite(cabecera[i].name , strlen(cabecera [i].name)+1,1,outputFile);
+		fwrite(&cabecera[i].size, sizeof(unsigned int),1,outputFile);
+	}
+	for(int i = 0; i < nFiles; i++){
+		free(cabecera[i].name);
+	}
+	free(cabecera);
+	if(close(outputFile)==EOF) return EXIT_FAILURE;
+
+	print("KEK");
+
+	return EXIT_SUCCESS;
+
 }
 
 /** Extract files stored in a tarball archive
