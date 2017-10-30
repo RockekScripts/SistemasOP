@@ -25,7 +25,7 @@ copynFile(FILE * origin, FILE * destination, int nBytes)
 	if(origin == NULL)return -1;
 
 	//La EntradaBytes se iguala a getc(origin) que
-	while(TotalBytes < nBytes && EntradaBytes = getc(origin) != EOF){
+	while(TotalBytes < nBytes && (EntradaBytes = getc(origin)) != EOF){
 		if(ferror(origin)!=0)return -1;
 		SalidaBytes = putc(EntradaBytes,destination);
 		if(SalidaBytes==EOF) return -1;
@@ -49,20 +49,20 @@ char*
 loadstr(FILE * file)
 {
 	// Complete the function
-	int _tamNombre=0;
+	int tamNombre=0;
 	char* nombre;
 	char bit;
 
-	while(bit=getc(file)!='\0') _tamNombre++;
+	while((bit=getc(file))!='\0') tamNombre++;
 
-	nombre = malloc(sizeof(char)*(_tamNombre+1));
+	nombre = malloc(sizeof(char)*(tamNombre+1));
 
-	fseek(file,-(_tamNombre+1),SEEK_CUR);
+	fseek(file,-(tamNombre+1),SEEK_CUR);
 
-	for(int i =0;index<(_tamNombre+1);index++)
+	for(int i = 0; i < tamNombre + 1; i++){
 		nombre[i]=getc(file);
 
-
+	}
 	return nombre;
 }
 
@@ -79,27 +79,27 @@ stHeaderEntry*
 readHeader(FILE * tarFile, int *nFiles)
 {
 	int NumFicheros =0, tam=0;
-	stHeaderEntry *stHeader=NULL;
+	stHeaderEntry *cabecera=NULL;
 
 	if(fread(&NumFicheros,sizeof(int),1,tarFile)==0){
 		return NULL;
 	}
 
-	stHeader=malloc(sizeof(stHeaderEntry)*NumFicheros);
+	cabecera=malloc(sizeof(stHeaderEntry)*NumFicheros);
 
 	for(int i =0; i <NumFicheros;i++)
 	{
-		if(!loadstr(tarFile,&stHeader[i].name)){
+		if (loadstr(tarFile) != cabecera[i].name){
 			return NULL;
 		}
 		fread(&tam,sizeof(unsigned int),1,tarFile);
 
-		stHeader[i].size = tam;
+		cabecera[i].size = tam;
 	}
 
 	(*nFiles) = NumFicheros;
 
-	return stHeader;
+	return cabecera;
 }
 
 /** Creates a tarball archive 
@@ -171,9 +171,9 @@ createTar(int nFiles, char *fileNames[], char tarName[])
 		free(cabecera[i].name);
 	}
 	free(cabecera);
-	if(close(outputFile)==EOF) return EXIT_FAILURE;
 
-	print("KEK");
+	if(fclose(outputFile)==EOF) return EXIT_FAILURE;
+
 
 	return EXIT_SUCCESS;
 
@@ -196,6 +196,31 @@ createTar(int nFiles, char *fileNames[], char tarName[])
 int
 extractTar(char tarName[])
 {
-	// Complete the function
+	FILE *tarFile = NULL;
+	FILE *destinationFile = NULL;
+	stHeaderEntry *cabecera;
+	int nfiles = 0, bytesCopiados = 0;
+
+	if((tarFile = fopen(tarName,"r"))==NULL)return EXIT_FAILURE;
+
+	if(readHeader(tarFile, &nfiles) == NULL){
+		return EXIT_FAILURE;
+	}
+
+	for ( int i = 0; i < nfiles; i++){
+		if((destinationFile = fopen(cabecera[i].name, "w")) == NULL)
+			return EXIT_FAILURE;
+		else{
+			bytesCopiados = copynFile(tarFile,destinationFile, cabecera[i].size);
+			if(bytesCopiados == -1) return EXIT_FAILURE;
+		}
+		if(fclose(destinationFile)!=0)return EXIT_FAILURE;
+	}
 	return EXIT_FAILURE;
+	for (int i = 0; i < nfiles;i++) free(cabecera[i].name);
+
+	free(cabecera);
+	if(fclose(tarFile) == EOF) return EXIT_FAILURE;
+
+	return EXIT_SUCCESS;
 }
