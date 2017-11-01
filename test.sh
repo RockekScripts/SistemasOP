@@ -1,0 +1,78 @@
+#!/bin/bash
+
+fichero1=file1.txt
+fichero2=file2.txt
+fichero3=file3.dat
+fichero_mtar=mytar.mtar
+direcotrioTMP=tmp
+direcotrioOUT=out
+
+
+echo "\nSuerte..."
+
+if [ ! -e ./mytar ]; then
+    echo "Fichero Mytar no encontrado!"
+    exit -1 
+ 
+elif [ ! -x ./mytar ]; then
+	echo "Fichero Mytar no es un ejecutable!"
+    exit -1
+fi
+
+
+if [ -d "$direcotrioTMP" ]; then #si existe TMP lo borra
+	rm -rf -- $direcotrioTMP  
+fi
+
+mkdir $direcotrioTMP 
+cd $direcotrioTMP	  
+
+#crea los tres archivos
+	touch $fichero1
+	echo "Hello World!" > $fichero1
+  	
+	touch $fichero2 
+	head -10 /etc/passwd > $fichero2 
+  	
+	touch $fichero3 
+	head -c 1024 /dev/urandom > $fichero3
+  	
+./../mytar -cf $fichero_mtar $fichero1 $fichero2 $fichero3 #se crea el tar
+
+mkdir $direcotrioOUT #se crea OUT
+cp ./$fichero_mtar ./$direcotrioOUT/$fichero_mtar  
+
+cd $direcotrioOUT
+./../../mytar -xf $fichero_mtar 
+
+if diff ../$fichero1 $fichero1 >/dev/null ; then
+  	echo "$fichero1 Correct"
+	
+else
+  	echo "$fichero1 Incorrect"
+	cd ..
+	cd ..
+  	exit -1
+fi
+
+if diff ../$fichero2 $fichero2 >/dev/null ; then
+  	echo "$fichero2 Correct"
+else
+  	echo "$fichero2 Incorrect"
+	cd ..
+	cd ..
+  	exit -1
+fi
+
+if diff ../$fichero3 $fichero3 >/dev/null ; then
+  	echo "$fichero3 Correct"
+else
+  	echo "$fichero3 Incorrect"
+	cd ..
+	cd ..
+	exit -1
+fi
+
+echo "Test Acabado con exito\n"
+
+exit 0 
